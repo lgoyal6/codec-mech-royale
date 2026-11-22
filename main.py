@@ -4,7 +4,7 @@ import os
 import select
 import sys
 
-from adaptive_combat import Bot
+from cross_lane import Bot
 
 
 def messages():
