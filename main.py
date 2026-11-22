@@ -4,7 +4,7 @@ import os
 import select
 import sys
 
-from staged_supply import Bot
+from kill_priority import Bot
 
 
 def messages():
