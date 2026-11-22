@@ -1,11 +1,11 @@
-# codec Mech Royale cover
+# codec Mech Royale routed
 
-The control policy with local obstacle clearance, three-dimensional shot checks, cover scoring, and time for passive repair.
+The cover policy with resumable A* for blocked ground rotations. Search is capped by time and node count. The local controller checks each candidate waypoint before following it.
 
 Build from this directory with the root Dockerfile.
 
 ```sh
-docker build --platform linux/amd64 -t codec-mech:cover .
+docker build --platform linux/amd64 -t codec-mech:routed .
 ```
 
 The process reads mechfight/1 observations from stdin and writes one JSON action per decision to stdout. The event supplies the arena at `/arena`. The image starts as UID 65534 and uses Python 3.13 with the standard library.
