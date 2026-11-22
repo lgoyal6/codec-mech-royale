@@ -4,7 +4,7 @@ import os
 import select
 import sys
 
-from cover_rotation import Bot
+from staged_supply import Bot
 
 
 def messages():
