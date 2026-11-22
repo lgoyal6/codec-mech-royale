@@ -4,7 +4,7 @@ import os
 import select
 import sys
 
-from cover_rotation import Bot
+from weapon_first import Bot
 
 
 def messages():
