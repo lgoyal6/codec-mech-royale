@@ -16,7 +16,7 @@ class Flight(NamedTuple):
 
 
 class Bot(FullLoadout):
-    name = "codec-roof-and-mortar"
+    name = "codec-laser-finish"
 
     def __init__(self, hello):
         super().__init__(hello)

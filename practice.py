@@ -344,6 +344,14 @@ class Bot(Routed):
                 needed = target["hp"] / max(1., stats["damage"])
                 want_charge = max(stats["min_charge"], stats["charge"] *
                                   clamp((needed - stats["min_frac"]) / (1 - stats["min_frac"]), 0., 1.))
+            elif "hp" in target:
+                rules = self.config["cubes"]
+                bonus = 1 + rules["damage_per_cube"] * min(me["cubes"], rules["stat_cap"])
+                cookoff = 1 + stats.get("cookoff", .6) * ("mortar" in target.get("weapons", ()))
+                needed = target["hp"] * 1.08 / max(1., stats["damage"] * bonus * cookoff)
+                fraction = (needed - stats["min_frac"]) / (1 - stats["min_frac"])
+                want_charge = max(stats["min_charge"] + self.step,
+                                  stats["charge"] * clamp(fraction, 0., 1.))
             laser_tol = math.atan2(self.base_radius, max(1., span))
             aligned = self.aim_window(me, aim, laser_tol, laser_tol)
             recently_hit = now - self.last_damage < 1.5
