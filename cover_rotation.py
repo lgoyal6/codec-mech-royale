@@ -7,7 +7,7 @@ BEARINGS = tuple((cos(i*pi/4), sin(i*pi/4)) for i in range(8))
 
 
 class Bot(LaserFinish):
-    name = "codec-cover-rotation"
+    name = "codec-bounded-cover"
 
     def __init__(self, hello):
         super().__init__(hello)
@@ -66,4 +66,9 @@ class Bot(LaserFinish):
         if hypot(px - zx, py - zy) >= zone["radius"] - 9:
             return default
         sx, sy, *_ = obs["self"]["pos"]
-        return point, hypot(sx-px, sy-py) <= 5.0, False
+        walk_to_cover = hypot(sx - px, sy - py)
+        base_point, base_hold, _ = default
+        walk_to_base = 0. if base_hold else hypot(sx - base_point[0], sy - base_point[1])
+        if walk_to_cover > walk_to_base + 24.:
+            return default
+        return point, walk_to_cover <= 5., False
