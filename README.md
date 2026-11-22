@@ -1,11 +1,11 @@
-# codec Mech Royale routed
+# codec Mech Royale economy
 
-The cover policy with resumable A* for blocked ground rotations. Search is capped by time and node count. The local controller checks each candidate waypoint before following it.
+The bot uses bounded route recovery, energy-aware movement, and nearby loot and repair objectives. It retains its arm gun and can equip a laser or lightning weapon.
 
 Build from this directory with the root Dockerfile.
 
 ```sh
-docker build --platform linux/amd64 -t codec-mech:routed .
+docker build --platform linux/amd64 -t codec-mech:economy .
 ```
 
 The process reads mechfight/1 observations from stdin and writes one JSON action per decision to stdout. The event supplies the arena at `/arena`. The image starts as UID 65534 and uses Python 3.13 with the standard library.
