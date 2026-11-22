@@ -4,7 +4,7 @@ import os
 import select
 import sys
 
-from adaptive_combat import Bot
+from combat_posture import Bot
 
 
 def messages():
