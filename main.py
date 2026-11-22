@@ -4,7 +4,7 @@ import os
 import select
 import sys
 
-from combat_horizon import Defensive as Bot
+from collision_evasion import Bot
 
 
 def messages():
