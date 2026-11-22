@@ -175,7 +175,7 @@ class Bot(Routed):
         p = me["pos"]
         hp = me["hp"] / me["max_hp"]
         nearest = distance(p, threats[0]["pos"]) if threats else math.inf
-        resource = goal.kind in ("pickup", "cube", "crate", "drop")
+        resource = goal.kind in ("pickup", "cube", "crate", "drop", "npc")
         recovering = hp < .72 and (len(threats) > 1 or nearest < 75 or now - self.last_damage < 4)
         pressure = len(threats) > 1 or nearest < 49 or now - self.last_damage < 1.15
         projectiles = self.projectile_risk(obs)
@@ -297,6 +297,11 @@ class Bot(Routed):
             not threats or distance(p, threats[0]["pos"]) > (53 if urgent else 75))
         targets = sorted(threats, key=lambda t: distance(p, t["pos"])
                          + .028 * t.get("hp", 1400) - 12 * (t["id"] == self.target_id))[:5]
+        if self.objective and self.objective.kind == "npc" and not recover:
+            item = next((x for x in obs["mechs"] if x["id"] == self.last_selected), None)
+            if item:
+                stats = self.config["npc"]
+                targets.insert(0, {**item, "height": stats["height"], "radius": stats["radius"]})
         if (self.objective and self.objective.kind == "crate" and
                 (not threats or distance(p, threats[0]["pos"]) > 99) and not recover):
             item = next((x for x in obs.get("crates", ()) if x["id"] == self.last_selected), None)
@@ -314,7 +319,7 @@ class Bot(Routed):
             point, span, aim = self.direct_aim(me, entry)
             if not self.arena.clear(source, point):
                 continue
-            if gun and entry["kind"] == "mech":
+            if gun and entry["kind"] in ("mech", "npc"):
                 lead_x, lead_y, impact, radius, gun_span = self.aim_for_gun(me, entry, gun["stats"], now)
                 if gun_span <= gun["stats"]["range"] and self.arena.clear(source, impact):
                     gun_aim = (lead_x, lead_y), math.atan2(radius, max(1., gun_span))
@@ -340,7 +345,7 @@ class Bot(Routed):
         if laser and span <= laser["stats"]["range"]:
             stats, charge = laser["stats"], laser.get("charge", 0.)
             want_charge = stats["charge"]
-            if target["kind"] == "crate":
+            if target["kind"] in ("crate", "npc") and "hp" in target:
                 needed = target["hp"] / max(1., stats["damage"])
                 want_charge = max(stats["min_charge"], stats["charge"] *
                                   clamp((needed - stats["min_frac"]) / (1 - stats["min_frac"]), 0., 1.))

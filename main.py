@@ -4,7 +4,7 @@ import os
 import select
 import sys
 
-from skyline import Bot
+from scavenge import Bot
 
 
 def messages():

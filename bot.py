@@ -94,8 +94,8 @@ class Bot:
 
     def aim_for_gun(self, me, target, stats, now):
         size = 1 + target.get("cubes", 0) * self.size_per_cube
-        radius = self.base_radius * size
-        midpoint = self.base_height * size / 2
+        radius = target.get("radius", self.base_radius * size)
+        midpoint = target.get("height", self.base_height * size) / 2
         muzzle = me["stats"]["muzzle_height"]
         offset = [b - a for a, b in zip(me["pos"], target["pos"])]
         offset[2] += midpoint - muzzle
