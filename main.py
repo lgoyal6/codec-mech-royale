@@ -4,7 +4,7 @@ import os
 import select
 import sys
 
-from bombard import Bot
+from skyline import Bot
 
 
 def messages():

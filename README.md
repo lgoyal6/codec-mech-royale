@@ -1,11 +1,11 @@
-# codec Mech Royale bombard
+# codec Mech Royale roof and mortar
 
-The bot uses bounded route recovery, energy-aware movement, and nearby loot and repair objectives. It retains its arm gun and can equip a laser, lightning, or mortar weapon. The mortar policy checks its intended arc against the arena geometry.
+The bot uses bounded route recovery, energy-aware movement, and nearby loot and repair objectives. It retains its arm gun and can equip a laser, lightning, or mortar weapon. The mortar policy checks its intended arc against the arena geometry. The bot can also use short jet climbs for accessible rooftop pickups and blocked rotations.
 
 Build from this directory with the root Dockerfile.
 
 ```sh
-docker build --platform linux/amd64 -t codec-mech:bombard .
+docker build --platform linux/amd64 -t codec-mech:arsenal .
 ```
 
 The process reads mechfight/1 observations from stdin and writes one JSON action per decision to stdout. The event supplies the arena at `/arena`. The image starts as UID 65534 and uses Python 3.13 with the standard library.
