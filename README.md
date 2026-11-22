@@ -1,11 +1,11 @@
-# codec Mech Royale control
+# codec Mech Royale cover
 
-Gun lead with velocity damping, torso-aware shot gating, and direct circle rotation with stall recovery.
+The control policy with local obstacle clearance, three-dimensional shot checks, cover scoring, and time for passive repair.
 
 Build from this directory with the root Dockerfile.
 
 ```sh
-docker build --platform linux/amd64 -t codec-mech:control .
+docker build --platform linux/amd64 -t codec-mech:cover .
 ```
 
 The process reads mechfight/1 observations from stdin and writes one JSON action per decision to stdout. The event supplies the arena at `/arena`. The image starts as UID 65534 and uses Python 3.13 with the standard library.

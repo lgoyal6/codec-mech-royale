@@ -4,7 +4,7 @@ import os
 import select
 import sys
 
-from bot import Bot
+from tactics import Bot
 
 
 def messages():
