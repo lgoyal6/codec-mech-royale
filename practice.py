@@ -148,27 +148,64 @@ class Bot(Routed):
 
     def projectile_risk(self, obs):
         me = obs["self"]
-        p = me["pos"]
-        radius = me["stats"]["radius"]
-        close = []
+        px, py, pz = me["pos"]
+        mx, my, mz = me["vel"]
+        body = me["stats"]
+        threats = []
         for shot in obs.get("projectiles", ()):
-            q, v = shot["pos"], shot["vel"]
-            x, y = q[0] - p[0], q[1] - p[1]
-            speed_squared = v[0] * v[0] + v[1] * v[1]
-            if speed_squared < 16 or abs(x) + abs(y) > 190:
+            q, velocity = shot["pos"], shot["vel"]
+            x, y, z = q[0] - px, q[1] - py, q[2] - pz
+            vx, vy, vz = velocity
+            rx, ry = vx - mx, vy - my
+            speed_squared = rx * rx + ry * ry
+            if speed_squared < 16 or abs(x) + abs(y) > 230:
                 continue
-            arrival = -(x * v[0] + y * v[1]) / speed_squared
-            if not 0 <= arrival < .50:
+            arrival = -(x * rx + y * ry) / speed_squared
+            if not 0 <= arrival <= .61:
                 continue
-            dx, dy = x + arrival * v[0], y + arrival * v[1]
-            if math.hypot(dx, dy) > radius + 8.5:
+            shell = shot["kind"] == "mortar"
+            gravity = self.config["weapons"]["mortar"]["gravity"] if shell else 0.
+            radius = body["radius"] + (6. if shell else .35)
+            vertical = z + (vz - mz) * arrival - gravity * arrival * arrival / 2
+            if not -6 < vertical < body["height"] + 7:
                 continue
-            z = q[2] + v[2] * arrival
-            if shot["kind"] == "mortar":
-                z -= self.config["weapons"]["mortar"]["gravity"] * arrival * arrival / 2
-            if p[2] - 5 < z < p[2] + me["stats"]["height"] + 7:
-                close.append((arrival, dx, dy, 7. if shot["kind"] == "mortar" else radius + 1.3))
-        return sorted(close)[:4]
+            lateral = math.hypot(x + rx * arrival, y + ry * arrival)
+            if lateral > radius + 3 + .5 * body["ground_accel"] * arrival ** 2:
+                continue
+            threats.append((arrival, x, y, z, vx, vy, vz, gravity, radius))
+        return sorted(threats)[:4]
+
+    def projectile_cost(self, me, projectiles, yaw, speed):
+        ux, uy = direction(yaw)
+        vx, vy, vz = me["vel"]
+        change_x, change_y = ux * speed - vx, uy * speed - vy
+        accel = me["stats"]["ground_accel"] if me["grounded"] else me["stats"]["air_accel"]
+        settle = math.hypot(change_x, change_y) / accel
+        cost = 0.
+        for arrival, x, y, z, sx, sy, sz, gravity, radius in projectiles:
+            # Approximate the curved acceleration path around the nearest
+            # crossing using continuous intersections on short segments.
+            start = max(0., arrival - .12)
+            previous = None
+            closest = math.inf
+            for n in range(5):
+                t = start + .065 * n
+                active = min(t, settle)
+                progress = active * (t - .5 * active) / settle if settle else 0.
+                dx = x + (sx - vx) * t - change_x * progress
+                dy = y + (sy - vy) * t - change_y * progress
+                dz = z + (sz - vz) * t - .5 * gravity * t * t
+                if previous is not None:
+                    ax, ay, az = previous
+                    nx, ny = dx - ax, dy - ay
+                    fraction = clamp(-(ax * nx + ay * ny) / max(.01, nx * nx + ny * ny), 0., 1.)
+                    vertical = az + (dz - az) * fraction
+                    margin = 4.5 if gravity else .45
+                    if -margin <= vertical <= me["stats"]["height"] + margin:
+                        closest = min(closest, math.hypot(ax + nx * fraction, ay + ny * fraction))
+                previous = dx, dy, dz
+            cost += 3.5 * max(0., min(1., (radius + 1.5 - closest) / 2))
+        return cost
 
     def steer(self, obs, goal, threats, urgent, holding):
         me, zone, now = obs["self"], obs["zone"], obs["t"]
@@ -201,9 +238,12 @@ class Bot(Routed):
         start_sprint = min(me["max_energy"] * .75, reserve + (9 if pressure or urgent else 22))
         self.sprinting = me["energy"] > (reserve if self.sprinting else start_sprint)
         boost = me["grounded"] and self.sprinting and (gap > 17 or pressure or urgent)
-        if any(w and w["kind"] == "laser" and w.get("charge", 0) > 0 for w in me["weapons"]):
+        charging = any(w and w["kind"] == "laser" and w.get("charge", 0) > 0 for w in me["weapons"])
+        if charging:
             boost = boost and (urgent or nearest < 55)
         speed = me["stats"]["boost_speed"] if boost else me["stats"]["walk_speed"]
+        if charging:
+            speed *= me["stats"].get("charge_move_mult", self.config["mech"]["charge_move_mult"])
         travel = min(8.5, max(3., gap))
         here = distance(p, zone["center"]) - zone["radius"]
         best_score, best_yaw = -math.inf, None
@@ -236,17 +276,8 @@ class Bot(Routed):
                 enemy_eye = (*enemy[:2], enemy[2] + 7)
                 if self.arena.clear(enemy_eye, eye):
                     score -= .83 if recovering or pressure else .25
-            for arrival, dx, dy, radius in projectiles:
-                ux, uy = direction(yaw)
-                mx = clamp((ux * speed - me["vel"][0]) * arrival,
-                           -me["stats"]["ground_accel"] * arrival ** 2 / 2,
-                           me["stats"]["ground_accel"] * arrival ** 2 / 2)
-                my = clamp((uy * speed - me["vel"][1]) * arrival,
-                           -me["stats"]["ground_accel"] * arrival ** 2 / 2,
-                           me["stats"]["ground_accel"] * arrival ** 2 / 2)
-                miss = math.hypot(dx - (me["vel"][0] * arrival + mx),
-                                  dy - (me["vel"][1] * arrival + my))
-                score -= 1.7 * max(0., 1 - miss / radius)
+            if projectiles:
+                score -= self.projectile_cost(me, projectiles, yaw, speed)
             if score > best_score:
                 best_score, best_yaw = score, yaw
         if best_yaw is None:
